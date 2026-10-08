@@ -7,12 +7,12 @@ const GROUP_ID = "143326439";
 const TARGET_ROLE_ID = "886692014";
 const API_KEY = process.env.ROBLOX_API_KEY;
 
-// Hier speichern wir Mitglieder, die wir bereits gesehen haben.
 let knownMembers = new Set();
 let initialized = false;
 
 async function getMembers() {
   console.log("Prüfe Gruppe...");
+
   const members = new Map();
   let pageToken = "";
 
@@ -32,30 +32,30 @@ async function getMembers() {
       });
 
       if (!response.ok) {
-        console.log("Fehler beim Abrufen der Mitglieder:", response.status);
+        console.log("Fehler beim Abrufen:", response.status);
         console.log(await response.text());
         return null;
       }
 
       const data = await response.json();
-      console.log("Roblox API Antwort:", JSON.stringify(data));
 
-      for (const membership of data.groupMemberships || data.memberships || []) {
-        const id = membership.path;
-        const role =
-          membership.role?.name ||
-          membership.role;
+      for (const membership of data.groupMemberships || []) {
+        const membershipPath = membership.path;
 
-        if (id) {
-          members.set(id, {
-            membershipId: id,
-            role: role
+        if (membershipPath) {
+          members.set(membershipPath, {
+            membershipId: membershipPath,
+            user: membership.user,
+            role: membership.role,
+            createTime: membership.createTime
           });
         }
       }
 
       pageToken = data.nextPageToken || "";
     } while (pageToken);
+
+    console.log(`Mitglieder gefunden: ${members.size}`);
 
     return members;
   } catch (error) {
@@ -66,7 +66,9 @@ async function getMembers() {
 
 async function rankMember(membershipId) {
   const url =
-    `https://apis.roblox.com/cloud/v2/groups/${GROUP_ID}/memberships/${encodeURIComponent(membershipId)}:assignRole`;
+    `https://apis.roblox.com/cloud/v2/groups/${GROUP_ID}/memberships/${encodeURIComponent(
+      membershipId.split("/").pop()
+    )}:assignRole`;
 
   try {
     const response = await fetch(url, {
@@ -81,15 +83,12 @@ async function rankMember(membershipId) {
     });
 
     if (!response.ok) {
-      console.log(
-        `Rang konnte nicht gesetzt werden (${membershipId}):`,
-        response.status
-      );
+      console.log("Rang konnte nicht gesetzt werden:", response.status);
       console.log(await response.text());
       return false;
     }
 
-    console.log(`Rang erfolgreich gesetzt: ${membershipId}`);
+    console.log("Rang erfolgreich gesetzt:", membershipId);
     return true;
   } catch (error) {
     console.log("Fehler beim Setzen des Rangs:", error.message);
@@ -107,31 +106,26 @@ async function checkMembers() {
 
   if (!members) return;
 
-  // Beim allerersten Durchlauf nur den aktuellen Stand merken.
-  // Dadurch werden nicht plötzlich alle bisherigen Mitglieder gerankt.
   if (!initialized) {
     knownMembers = new Set(members.keys());
     initialized = true;
 
-    console.log(
-      `Startbestand gespeichert: ${knownMembers.size} Mitglieder.`
-    );
-
+    console.log(`Startbestand gespeichert: ${knownMembers.size} Mitglieder.`);
     return;
   }
 
-  // Neue Mitglieder finden.
-  for (const [membershipId] of members) {
+  for (const [membershipId, member] of members) {
     if (!knownMembers.has(membershipId)) {
-      console.log(`Neues Mitglied gefunden: ${membershipId}`);
+      console.log("Neues Mitglied gefunden:", member.user);
 
-      await rankMember(membershipId);
+      const success = await rankMember(membershipId);
 
-      knownMembers.add(membershipId);
+      if (success) {
+        knownMembers.add(membershipId);
+      }
     }
   }
 
-  // Mitglieder entfernen, die nicht mehr in der Gruppe sind.
   for (const oldMember of knownMembers) {
     if (!members.has(oldMember)) {
       knownMembers.delete(oldMember);
@@ -148,11 +142,7 @@ app.listen(PORT, () => {
 
   checkMembers();
 
-  // Alle 60 Sekunden nach neuen Mitgliedern schauen.
   setInterval(() => {
-  console.log("Timer läuft...");
-  checkMembers();
-}, 10000);
-  
-  process.stdin.resume();
+    checkMembers();
+  }, 30000);
 });
