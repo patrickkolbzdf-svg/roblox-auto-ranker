@@ -149,5 +149,8 @@ app.listen(PORT, () => {
   checkMembers();
 
   // Alle 60 Sekunden nach neuen Mitgliedern schauen.
-  setInterval(checkMembers, 60000);
+  setInterval(() => {
+  console.log("Timer läuft...");
+  checkMembers();
+}, 10000);
 });
