@@ -41,7 +41,7 @@ async function getMembers() {
       console.log("Roblox API Antwort:", JSON.stringify(data));
 
       for (const membership of data.groupMemberships || data.memberships || []) {
-        const id = membership.name || membership.membership;
+        const id = membership.path;
         const role =
           membership.role?.name ||
           membership.role;
