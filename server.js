@@ -153,4 +153,6 @@ app.listen(PORT, () => {
   console.log("Timer läuft...");
   checkMembers();
 }, 10000);
+  
+  process.stdin.resume();
 });
