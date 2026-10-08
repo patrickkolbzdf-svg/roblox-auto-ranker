@@ -142,7 +142,8 @@ app.listen(PORT, () => {
 
   checkMembers();
 
-  setInterval(() => {
-    checkMembers();
-  }, 30000);
+setInterval(() => {
+  console.log("Timer läuft...");
+  checkMembers();
+}, 60000);
 });
