@@ -12,6 +12,7 @@ let knownMembers = new Set();
 let initialized = false;
 
 async function getMembers() {
+  console.log("Prüfe Gruppe...");
   const members = new Map();
   let pageToken = "";
 
